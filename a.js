@@ -748,11 +748,18 @@ function renderLedger() {
     const totalExpense = records.filter(r => r.type === '支出').reduce((s, r) => s + Number(r.amount || 0), 0);
     const totalBalance = totalIncome - totalExpense;
 
-    // 计算各板块收到的投资款（从主卡转入的收入）
+    // 计算各板块实际投资款 = 收到的主卡转入收入 - 转回主卡的支出
     const investmentByBusiness = {};
-    records.filter(r => r.businessType !== '主卡' && r.type === '收入' && r.expenseUse === '银行放款').forEach(r => {
-      const bt = r.businessType || '未分类';
-      investmentByBusiness[bt] = (investmentByBusiness[bt] || 0) + Number(r.amount || 0);
+    ['小贷业务', '汽车业务', '手机分期'].forEach(bt => {
+      // 该板块收到的主卡转入（收入且收支用途=银行放款）
+      const incomeFromMain = records
+        .filter(r => r.businessType === bt && r.type === '收入' && r.expenseUse === '银行放款')
+        .reduce((s, r) => s + Number(r.amount || 0), 0);
+      // 该板块转回主卡的金额（支出且转入板块=主卡）
+      const transferToMain = records
+        .filter(r => r.businessType === bt && r.type === '支出' && r.toBusinessType === '主卡')
+        .reduce((s, r) => s + Number(r.amount || 0), 0);
+      investmentByBusiness[bt] = incomeFromMain - transferToMain;
     });
 
     summaryContainer.innerHTML = `
