@@ -740,76 +740,123 @@ function renderLedger() {
     }
   });
 
-  // 渲染顶部统计卡片
+  // 渲染统计表格
   const summaryContainer = document.getElementById('ledgerSummary');
   if (summaryContainer) {
-    // 计算总体统计
-    const totalIncome = records.filter(r => r.type === '收入').reduce((s, r) => s + Number(r.amount || 0), 0);
-    const totalExpense = records.filter(r => r.type === '支出').reduce((s, r) => s + Number(r.amount || 0), 0);
-    const totalBalance = totalIncome - totalExpense;
+    // 计算各板块数据
+    const mainGroup = businessGroups['主卡'];
+    const xdGroup = businessGroups['小贷业务'];
+    const qcGroup = businessGroups['汽车业务'];
+    const sjGroup = businessGroups['手机分期'];
 
-    // 计算各板块实际投资款 = 收到的主卡转入收入 - 转回主卡的支出
-    const investmentByBusiness = {};
-    ['小贷业务', '汽车业务', '手机分期'].forEach(bt => {
-      // 该板块收到的主卡转入（收入且收支用途=银行放款）
+    // 主卡：实际转出投资款 = 转给小贷+汽车+手机分期的总金额
+    const mainTransferOut = records
+      .filter(r => r.businessType === '主卡' && r.type === '支出' && ['小贷业务', '汽车业务', '手机分期'].includes(r.toBusinessType))
+      .reduce((s, r) => s + Number(r.amount || 0), 0);
+    const mainActualIncome = mainGroup.income - mainTransferOut;
+    const mainActualBalance = mainActualIncome - mainGroup.expense;
+
+    // 各板块实际投资款 = 收到的主卡转入 - 转回主卡的支出
+    const calcActual = (group, type) => {
       const incomeFromMain = records
-        .filter(r => r.businessType === bt && r.type === '收入' && r.expenseUse === '银行放款')
+        .filter(r => r.businessType === type && r.type === '收入' && r.expenseUse === '银行放款')
         .reduce((s, r) => s + Number(r.amount || 0), 0);
-      // 该板块转回主卡的金额（支出且转入板块=主卡）
       const transferToMain = records
-        .filter(r => r.businessType === bt && r.type === '支出' && r.toBusinessType === '主卡')
+        .filter(r => r.businessType === type && r.type === '支出' && r.toBusinessType === '主卡')
         .reduce((s, r) => s + Number(r.amount || 0), 0);
-      investmentByBusiness[bt] = incomeFromMain - transferToMain;
-    });
+      const actualInvest = incomeFromMain - transferToMain;
+      const actualBalance = actualInvest - group.expense;
+      return { actualInvest, actualBalance };
+    };
+
+    const xd = calcActual(xdGroup, '小贷业务');
+    const qc = calcActual(qcGroup, '汽车业务');
+    const sj = calcActual(sjGroup, '手机分期');
 
     summaryContainer.innerHTML = `
-      <div class="summary-item" style="border-left: 4px solid #16a34a;">
-        <div class="summary-label">总体统计</div>
-        <div class="summary-value income">收入 ${formatCurrency(totalIncome)}</div>
-        <div class="summary-value expense">支出 ${formatCurrency(totalExpense)}</div>
-        <div class="summary-value balance">结余 ${formatCurrency(totalBalance)}</div>
+      <div class="ledger-table-container">
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th style="width:140px;"></th>
+              <th class="col-main">主卡</th>
+              <th class="col-xd">小贷业务</th>
+              <th class="col-qc">汽车业务</th>
+              <th class="col-sj">手机分期业务</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="row-label">收入</td>
+              <td class="col-main number income">${formatCurrency(mainGroup.income)}</td>
+              <td class="col-xd number income">${formatCurrency(xdGroup.income)}</td>
+              <td class="col-qc number income">${formatCurrency(qcGroup.income)}</td>
+              <td class="col-sj number income">${formatCurrency(sjGroup.income)}</td>
+            </tr>
+            <tr>
+              <td class="row-label">支出</td>
+              <td class="col-main number expense">${formatCurrency(mainGroup.expense)}</td>
+              <td class="col-xd number expense">${formatCurrency(xdGroup.expense)}</td>
+              <td class="col-qc number expense">${formatCurrency(qcGroup.expense)}</td>
+              <td class="col-sj number expense">${formatCurrency(sjGroup.expense)}</td>
+            </tr>
+            <tr>
+              <td class="row-label">结余</td>
+              <td class="col-main number balance">${formatCurrency(mainGroup.income - mainGroup.expense)}</td>
+              <td class="col-xd number balance">${formatCurrency(xdGroup.income - xdGroup.expense)}</td>
+              <td class="col-qc number balance">${formatCurrency(qcGroup.income - qcGroup.expense)}</td>
+              <td class="col-sj number balance">${formatCurrency(sjGroup.income - sjGroup.expense)}</td>
+            </tr>
+            <tr style="height:20px;"><td colspan="5"></td></tr>
+            <tr>
+              <td class="row-label">实际收入</td>
+              <td class="col-main number income">${formatCurrency(mainActualIncome)}</td>
+              <td class="col-xd number income">${formatCurrency(xd.actualInvest)}</td>
+              <td class="col-qc number income">${formatCurrency(qc.actualInvest)}</td>
+              <td class="col-sj number income">${formatCurrency(sj.actualInvest)}</td>
+            </tr>
+            <tr>
+              <td class="row-label">实际转出投资款</td>
+              <td class="col-main number expense">${formatCurrency(mainTransferOut)}</td>
+              <td class="col-xd">-</td>
+              <td class="col-qc">-</td>
+              <td class="col-sj">-</td>
+            </tr>
+            <tr>
+              <td class="row-label">实际转入投资款</td>
+              <td class="col-main">-</td>
+              <td class="col-xd number income">${formatCurrency(xd.actualInvest)}</td>
+              <td class="col-qc number income">${formatCurrency(qc.actualInvest)}</td>
+              <td class="col-sj number income">${formatCurrency(sj.actualInvest)}</td>
+            </tr>
+            <tr>
+              <td class="row-label">实际余额</td>
+              <td class="col-main number balance">${formatCurrency(mainActualBalance)}</td>
+              <td class="col-xd number balance">${formatCurrency(xd.actualBalance)}</td>
+              <td class="col-qc number balance">${formatCurrency(qc.actualBalance)}</td>
+              <td class="col-sj number balance">${formatCurrency(sj.actualBalance)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      ${businessTypes.map(type => {
-        const group = businessGroups[type];
-        const balance = group.income - group.expense;
-        const borderColor = type === '主卡' ? '#dc2626' : '#2563eb';
-        return `
-          <div class="summary-item" style="border-left: 4px solid ${borderColor};">
-            <div class="summary-label">${type}</div>
-            <div class="summary-value income">收入 ${formatCurrency(group.income)}</div>
-            <div class="summary-value expense">支出 ${formatCurrency(group.expense)}</div>
-            <div class="summary-value balance">结余 ${formatCurrency(balance)}</div>
-          </div>
-        `;
-      }).join('')}
-      ${Object.keys(investmentByBusiness).length > 0 ? `
-        <div class="summary-item" style="border-left: 4px solid #9333ea;">
-          <div class="summary-label">投资款到板块</div>
-          ${Object.entries(investmentByBusiness).map(([bt, amt]) => `
-            <div class="summary-value" style="font-size:14px;">${bt}：${formatCurrency(amt)}</div>
-          `).join('')}
-        </div>
-      ` : ''}
     `;
   }
 
   const container = document.getElementById('ledgerDetails');
   if (!container) return;
 
+  // 各板块银行卡明细
   let html = '';
+  ['主卡', '小贷业务', '汽车业务', '手机分期'].forEach(type => {
+    const group = businessGroups[type];
+    if (Object.keys(group.cards).length === 0) return;
 
-  // 主卡统计
-  const mainCard = businessGroups['主卡'];
-  html += `
-    <div class="ledger-card" style="border-left: 4px solid #dc2626;">
-      <div class="ledger-card-header">
-        主卡（资金来源）
-        <span class="income">收入 ${formatCurrency(mainCard.income)}</span>
-        <span class="expense">支出 ${formatCurrency(mainCard.expense)}</span>
-      </div>
-      ${Object.keys(mainCard.cards).length > 0 ? `
-        ${Object.entries(mainCard.cards).map(([card, data]) => `
-          <div class="ledger-item" style="background: #fef2f2;">
+    const borderColor = type === '主卡' ? '#dc2626' : type === '小贷业务' ? '#2563eb' : type === '汽车业务' ? '#16a34a' : '#ca8a04';
+    html += `
+      <div class="ledger-card" style="border-left: 4px solid ${borderColor}; margin-top:16px;">
+        <div class="ledger-card-header">${type} - 银行卡明细</div>
+        ${Object.entries(group.cards).map(([card, data]) => `
+          <div class="ledger-item">
             <span class="ledger-item-label">${card}</span>
             <span>
               <span class="ledger-item-value income">收 ${formatCurrency(data.income)}</span>
@@ -818,82 +865,11 @@ function renderLedger() {
             </span>
           </div>
         `).join('')}
-      ` : '<div class="ledger-item"><span class="ledger-item-label">暂无记录</span></div>'}
-    </div>
-  `;
-
-  // 各业务板块统计
-  ['小贷业务', '汽车业务', '手机分期'].forEach(type => {
-    const group = businessGroups[type];
-    if (group.income === 0 && group.expense === 0) return;
-
-    html += `
-      <div class="ledger-card" style="border-left: 4px solid #2563eb;">
-        <div class="ledger-card-header">
-          ${type}
-          <span class="income">收入 ${formatCurrency(group.income)}</span>
-          <span class="expense">支出 ${formatCurrency(group.expense)}</span>
-        </div>
-        ${Object.keys(group.cards).length > 0 ? `
-          ${Object.entries(group.cards).map(([card, data]) => `
-            <div class="ledger-item" style="background: #eff6ff;">
-              <span class="ledger-item-label">${card}</span>
-              <span>
-                <span class="ledger-item-value income">收 ${formatCurrency(data.income)}</span>
-                <span style="margin: 0 6px; color: #ccc;">|</span>
-                <span class="ledger-item-value expense">支 ${formatCurrency(data.expense)}</span>
-              </span>
-            </div>
-          `).join('')}
-        ` : ''}
-        ${Object.keys(group.items).length > 0 ? `
-          <div class="ledger-section">
-            <div class="ledger-section-title">支出明细</div>
-            ${Object.entries(group.items).map(([cat, amount]) => `
-              <div class="ledger-item">
-                <span class="ledger-item-label">${cat}</span>
-                <span class="ledger-item-value expense">${formatCurrency(amount)}</span>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
       </div>
     `;
   });
 
-  // 支出汇总
-  const allExpenses = {};
-  records.filter(r => r.type === '支出').forEach(item => {
-    const cat = item.expenseUse || '其它费用';
-    if (!allExpenses[cat]) allExpenses[cat] = 0;
-    allExpenses[cat] += Number(item.amount || 0);
-  });
-
-  html += `
-    <div class="ledger-card" style="border-left: 4px solid #16a34a;">
-      <div class="ledger-card-header">支出汇总</div>
-      <div class="ledger-section">
-        <div class="ledger-section-title">投资款</div>
-        ${allExpenses['投资款'] ? `
-          <div class="ledger-item">
-            <span class="ledger-item-label">投资款</span>
-            <span class="ledger-item-value expense">${formatCurrency(allExpenses['投资款'])}</span>
-          </div>
-        ` : '<div class="ledger-item"><span class="ledger-item-label">暂无</span></div>'}
-      </div>
-      <div class="ledger-section">
-        <div class="ledger-section-title">开支</div>
-        ${['伙食费', '房租', '水电', '招待费', '办公用品', '固定资产', '其它费用'].map(cat => `
-          <div class="ledger-item">
-            <span class="ledger-item-label">${cat}</span>
-            <span class="ledger-item-value expense">${formatCurrency(allExpenses[cat] || 0)}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-
-  container.innerHTML = html;
+  container.innerHTML = html || '<div style="padding:20px; color:#666;">暂无明细记录</div>';
 }
 
 render();

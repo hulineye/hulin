@@ -478,6 +478,46 @@
     }
     .ledger-item-value.income { color: #16a34a; }
     .ledger-item-value.expense { color: #dc2626; }
+    .ledger-table-container {
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .ledger-table th {
+      background: #f1f5f9;
+      padding: 12px 16px;
+      text-align: center;
+      font-weight: 700;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+    }
+    .ledger-table td {
+      padding: 12px 16px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      font-size: 14px;
+    }
+    .ledger-table .row-label {
+      font-weight: 600;
+      background: #f8fafc;
+      color: #475569;
+      text-align: left;
+    }
+    .ledger-table .col-main { background: #fef2f2; }
+    .ledger-table .col-xd { background: #eff6ff; }
+    .ledger-table .col-qc { background: #f0fdf4; }
+    .ledger-table .col-sj { background: #fefce8; }
+    .ledger-table .number { font-weight: 600; }
+    .ledger-table .number.income { color: #16a34a; }
+    .ledger-table .number.expense { color: #dc2626; }
+    .ledger-table .number.balance { color: #2563eb; }
   </style>
 </head>
 <body>
