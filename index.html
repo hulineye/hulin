@@ -517,7 +517,7 @@
       <div class="page-head">
       <div>
         <h1>MORODOK 财务系统</h1>
-        <p class="hint">记录公户转账银行卡号码、卡转卡记录、MORODOK名称、用途、支出用途、金额、备注和对账状态。</p>
+        <p class="hint">记录公户转账银行卡号码、卡转卡记录、MORODOK名称、用途、收支用途、金额、备注和对账状态。</p>
       </div>
       <div class="mini-pill">当前用户：<span id="userNameDisplay">未登录</span></div>
       <button type="button" id="logoutBtn" class="secondary" style="display:none;">退出登录</button>
@@ -556,21 +556,19 @@
           </select>
         </label>
         <label>
-  支出用途
-  <select name="expenseUse" required>
-    <option value=""></option>
-    <option value="投资款">投资款</option>
-    <optgroup label="开支">
-      <option value="伙食费">伙食费</option>
-      <option value="房租">房租</option>
-      <option value="水电">水电</option>
-      <option value="招待费">招待费</option>
-      <option value="办公用品">办公用品</option>
-      <option value="固定资产">固定资产</option>
-      <option value="其它费用">其它费用</option>
-    </optgroup>
-  </select>
-</label>
+          收支用途
+          <input type="text" name="expenseUse" list="expenseUseList" placeholder="选择或输入" required />
+          <datalist id="expenseUseList">
+            <option value="银行放款">
+            <option value="投资款">
+            <option value="伙食费">
+            <option value="房租">
+            <option value="水电">
+            <option value="招待费">
+            <option value="办公用品">
+            <option value="固定资产">
+            <option value="其它费用">
+          </datalist>
         </label>
         <label>
           收支类型
@@ -660,7 +658,7 @@
           <th>转入银行卡卡号</th>
           <th>卡收款人名称</th>
           <th>卡用途</th>
-          <th>支出用途</th>
+          <th>收支用途</th>
           <th>收支类型</th>
           <th>金额 (<span id="currencyLabel">¥</span>)</th>
           <th>对账状态</th>

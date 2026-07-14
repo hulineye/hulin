@@ -343,7 +343,7 @@ function render() {
     toCardNumber: 'text',
     toCardName: 'text',
     cardUse: 'text',
-    expenseUse: 'select',
+    expenseUse: 'text',
     type: 'select',
     amount: 'number',
     status: 'select',
@@ -406,17 +406,18 @@ function createEditControl(fieldName, value) {
       <option value="已对账" ${escapedValue === '已对账' ? 'selected' : ''}>已对账</option>
     </select>`;
   } else if (fieldName === 'expenseUse') {
-    return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
-      <option value=""></option>
-      <option value="投资款" ${escapedValue === '投资款' ? 'selected' : ''}>投资款</option>
-      <option value="伙食费" ${escapedValue === '伙食费' ? 'selected' : ''}>伙食费</option>
-      <option value="房租" ${escapedValue === '房租' ? 'selected' : ''}>房租</option>
-      <option value="水电" ${escapedValue === '水电' ? 'selected' : ''}>水电</option>
-      <option value="招待费" ${escapedValue === '招待费' ? 'selected' : ''}>招待费</option>
-      <option value="办公用品" ${escapedValue === '办公用品' ? 'selected' : ''}>办公用品</option>
-      <option value="固定资产" ${escapedValue === '固定资产' ? 'selected' : ''}>固定资产</option>
-      <option value="其它费用" ${escapedValue === '其它费用' ? 'selected' : ''}>其它费用</option>
-    </select>`;
+    return `<input type="text" class="edit-input" list="editExpenseUseList" value="${escapedValue}" />
+    <datalist id="editExpenseUseList">
+      <option value="银行放款">
+      <option value="投资款">
+      <option value="伙食费">
+      <option value="房租">
+      <option value="水电">
+      <option value="招待费">
+      <option value="办公用品">
+      <option value="固定资产">
+      <option value="其它费用">
+    </datalist>`;
   } else {
     return `<input type="text" class="edit-input" value="${escapedValue}" />`;
   }
