@@ -547,6 +547,15 @@
           <input type="text" name="cardUse" placeholder="例如：日常周转" required />
         </label>
         <label>
+          业务板块
+          <select name="businessType" required>
+            <option value="主卡">主卡（资金来源）</option>
+            <option value="小贷业务">小贷业务</option>
+            <option value="汽车业务">汽车业务</option>
+            <option value="手机分期">手机分期</option>
+          </select>
+        </label>
+        <label>
   支出用途
   <select name="expenseUse" required>
     <option value=""></option>
@@ -647,6 +656,7 @@
           <th>日期</th>
           <th>转账银行卡号码</th>
           <th>卡名称</th>
+          <th>业务板块</th>
           <th>转入银行卡卡号</th>
           <th>卡收款人名称</th>
           <th>卡用途</th>

@@ -330,7 +330,7 @@ function render() {
   summary.textContent = `共 ${visibleRecords.length} 条记录（总计 ${records.length} 条）`;
 
   if (!visibleRecords.length) {
-    tableBody.innerHTML = '<tr><td colspan="12">暂无匹配记录</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="13">暂无匹配记录</td></tr>';
     renderStats();
     renderReports();
     return;
@@ -358,6 +358,7 @@ function render() {
         <td data-field="date" data-type="date">${item.date || '-'}</td>
         <td data-field="bankCard" data-type="text">${item.bankCard || '-'}</td>
         <td data-field="cardName" data-type="text">${item.cardName || '-'}</td>
+        <td data-field="businessType" data-type="select">${item.businessType || '-'}</td>
         <td data-field="toCardNumber" data-type="text">${item.toCardNumber || '-'}</td>
         <td data-field="toCardName" data-type="text">${item.toCardName || '-'}</td>
         <td data-field="cardUse" data-type="text">${item.cardUse || '-'}</td>
@@ -391,6 +392,13 @@ function createEditControl(fieldName, value) {
     return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
       <option value="收入" ${escapedValue === '收入' ? 'selected' : ''}>收入</option>
       <option value="支出" ${escapedValue === '支出' ? 'selected' : ''}>支出</option>
+    </select>`;
+  } else if (fieldName === 'businessType') {
+    return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
+      <option value="主卡" ${escapedValue === '主卡' ? 'selected' : ''}>主卡</option>
+      <option value="小贷业务" ${escapedValue === '小贷业务' ? 'selected' : ''}>小贷业务</option>
+      <option value="汽车业务" ${escapedValue === '汽车业务' ? 'selected' : ''}>汽车业务</option>
+      <option value="手机分期" ${escapedValue === '手机分期' ? 'selected' : ''}>手机分期</option>
     </select>`;
   } else if (fieldName === 'status') {
     return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
@@ -480,6 +488,7 @@ form.addEventListener('submit', (event) => {
     toCardNumber: data.toCardNumber,
     toCardName: data.toCardName,
     cardUse: data.cardUse,
+    businessType: data.businessType || '主卡',
     expenseUse: data.expenseUse,
     type: data.type,
     amount: Number(data.amount || 0),
@@ -546,11 +555,12 @@ exportBtn.addEventListener('click', () => {
     return;
   }
 
-  const header = ['日期', '转账银行卡号码', '卡名称', '转入银行卡卡号', '卡收款人名称', '卡用途', '支出用途', '收支类型', '金额', '货币单位', '对账状态', '备注'];
+  const header = ['日期', '转账银行卡号码', '卡名称', '业务板块', '转入银行卡卡号', '卡收款人名称', '卡用途', '支出用途', '收支类型', '金额', '货币单位', '对账状态', '备注'];
   const rows = exportData.map((item) => [
     item.date || '',
     item.bankCard || '',
     item.cardName || '',
+    item.businessType || '',
     item.toCardNumber || '',
     item.toCardName || '',
     item.cardUse || '',
@@ -609,6 +619,7 @@ navItems.forEach((item) => {
 
 // 台账明细渲染
 function renderLedger() {
+  // 计算总收入、总支出、结余
   const totalIncome = records
     .filter((item) => item.type === '收入')
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -627,72 +638,112 @@ function renderLedger() {
   const container = document.getElementById('ledgerDetails');
   if (!container) return;
 
-  // 按银行卡分组
-  const bankGroups = {};
-  records.forEach((item) => {
-    const bankCard = item.bankCard || '未填写';
-    if (!bankGroups[bankCard]) {
-      bankGroups[bankCard] = {
-        income: 0,
-        expense: 0,
-        items: {},
-      };
-    }
-    if (item.type === '收入') {
-      bankGroups[bankCard].income += Number(item.amount || 0);
-    } else {
-      bankGroups[bankCard].expense += Number(item.amount || 0);
-      const expenseUse = item.expenseUse || '其它费用';
-      if (!bankGroups[bankCard].items[expenseUse]) {
-        bankGroups[bankCard].items[expenseUse] = 0;
-      }
-      bankGroups[bankCard].items[expenseUse] += Number(item.amount || 0);
-    }
+  // 按业务板块分组
+  const businessTypes = ['主卡', '小贷业务', '汽车业务', '手机分期'];
+  const businessGroups = {};
+  businessTypes.forEach(type => {
+    businessGroups[type] = {
+      income: 0,
+      expense: 0,
+      cards: {},
+      transferIn: 0,
+      transferOut: 0,
+      items: {},
+    };
   });
 
-  // 支出分类
-  const expenseCategories = {
-    '投资款': [],
-    '伙食费': [],
-    '房租': [],
-    '水电': [],
-    '招待费': [],
-    '办公用品': [],
-    '固定资产': [],
-    '其它费用': [],
-  };
+  // 分类汇总
+  records.forEach((item) => {
+    const businessType = item.businessType || '主卡';
+    if (!businessGroups[businessType]) {
+      businessGroups[businessType] = {
+        income: 0, expense: 0, cards: {}, transferIn: 0, transferOut: 0, items: {}
+      };
+    }
 
-  Object.entries(bankGroups).forEach(([bankCard, data]) => {
-    Object.entries(data.items).forEach(([category, amount]) => {
-      if (expenseCategories[category]) {
-        expenseCategories[category].push({ bankCard, amount });
+    const amount = Number(item.amount || 0);
+    const bankCard = item.bankCard || '未填写';
+
+    // 按银行卡统计
+    if (!businessGroups[businessType].cards[bankCard]) {
+      businessGroups[businessType].cards[bankCard] = { income: 0, expense: 0 };
+    }
+
+    if (item.type === '收入') {
+      businessGroups[businessType].income += amount;
+      businessGroups[businessType].cards[bankCard].income += amount;
+    } else {
+      businessGroups[businessType].expense += amount;
+      businessGroups[businessType].cards[bankCard].expense += amount;
+
+      // 支出分类
+      const expenseUse = item.expenseUse || '其它费用';
+      if (!businessGroups[businessType].items[expenseUse]) {
+        businessGroups[businessType].items[expenseUse] = 0;
       }
-    });
+      businessGroups[businessType].items[expenseUse] += amount;
+    }
+
+    // 转账关系
+    if (item.type === '支出' && item.cardUse) {
+      businessGroups[businessType].transferOut += amount;
+    }
   });
 
   let html = '';
-  Object.entries(bankGroups).forEach(([bankCard, data]) => {
-    const cardBalance = data.income - data.expense;
-    html += `
-      <div class="ledger-card">
-        <div class="ledger-card-header">
-          ${bankCard}
-          <span class="income">收入 ${formatCurrency(data.income)}</span>
-          <span class="expense">支出 ${formatCurrency(data.expense)}</span>
-        </div>
-        ${data.income > 0 ? `
-          <div class="ledger-section">
-            <div class="ledger-section-title">收入</div>
-            <div class="ledger-item">
-              <span class="ledger-item-label">收入</span>
-              <span class="ledger-item-value income">${formatCurrency(data.income)}</span>
-            </div>
+
+  // 主卡统计
+  const mainCard = businessGroups['主卡'];
+  html += `
+    <div class="ledger-card" style="border-left: 4px solid #dc2626;">
+      <div class="ledger-card-header">
+        主卡（资金来源）
+        <span class="income">收入 ${formatCurrency(mainCard.income)}</span>
+        <span class="expense">支出 ${formatCurrency(mainCard.expense)}</span>
+      </div>
+      ${Object.keys(mainCard.cards).length > 0 ? `
+        ${Object.entries(mainCard.cards).map(([card, data]) => `
+          <div class="ledger-item" style="background: #fef2f2;">
+            <span class="ledger-item-label">${card}</span>
+            <span>
+              <span class="ledger-item-value income">收 ${formatCurrency(data.income)}</span>
+              <span style="margin: 0 6px; color: #ccc;">|</span>
+              <span class="ledger-item-value expense">支 ${formatCurrency(data.expense)}</span>
+            </span>
           </div>
+        `).join('')}
+      ` : '<div class="ledger-item"><span class="ledger-item-label">暂无记录</span></div>'}
+    </div>
+  `;
+
+  // 各业务板块统计
+  ['小贷业务', '汽车业务', '手机分期'].forEach(type => {
+    const group = businessGroups[type];
+    if (group.income === 0 && group.expense === 0) return;
+
+    html += `
+      <div class="ledger-card" style="border-left: 4px solid #2563eb;">
+        <div class="ledger-card-header">
+          ${type}
+          <span class="income">收入 ${formatCurrency(group.income)}</span>
+          <span class="expense">支出 ${formatCurrency(group.expense)}</span>
+        </div>
+        ${Object.keys(group.cards).length > 0 ? `
+          ${Object.entries(group.cards).map(([card, data]) => `
+            <div class="ledger-item" style="background: #eff6ff;">
+              <span class="ledger-item-label">${card}</span>
+              <span>
+                <span class="ledger-item-value income">收 ${formatCurrency(data.income)}</span>
+                <span style="margin: 0 6px; color: #ccc;">|</span>
+                <span class="ledger-item-value expense">支 ${formatCurrency(data.expense)}</span>
+              </span>
+            </div>
+          `).join('')}
         ` : ''}
-        ${Object.keys(data.items).length > 0 ? `
+        ${Object.keys(group.items).length > 0 ? `
           <div class="ledger-section">
-            <div class="ledger-section-title">支出</div>
-            ${Object.entries(data.items).map(([cat, amount]) => `
+            <div class="ledger-section-title">支出明细</div>
+            ${Object.entries(group.items).map(([cat, amount]) => `
               <div class="ledger-item">
                 <span class="ledger-item-label">${cat}</span>
                 <span class="ledger-item-value expense">${formatCurrency(amount)}</span>
@@ -705,30 +756,33 @@ function renderLedger() {
   });
 
   // 支出汇总
+  const allExpenses = {};
+  records.filter(r => r.type === '支出').forEach(item => {
+    const cat = item.expenseUse || '其它费用';
+    if (!allExpenses[cat]) allExpenses[cat] = 0;
+    allExpenses[cat] += Number(item.amount || 0);
+  });
+
   html += `
-    <div class="ledger-card">
+    <div class="ledger-card" style="border-left: 4px solid #16a34a;">
       <div class="ledger-card-header">支出汇总</div>
       <div class="ledger-section">
-        <div class="ledger-sub-section">
-          <div class="ledger-sub-section-title">投资款</div>
-          ${expenseCategories['投资款'].length > 0 ? expenseCategories['投资款'].map(item => `
-            <div class="ledger-item">
-              <span class="ledger-item-label">${item.bankCard}</span>
-              <span class="ledger-item-value expense">${formatCurrency(item.amount)}</span>
-            </div>
-          `).join('') : '<div class="ledger-item"><span class="ledger-item-label">暂无</span><span class="ledger-item-value">-</span></div>'}
-        </div>
+        <div class="ledger-section-title">投资款</div>
+        ${allExpenses['投资款'] ? `
+          <div class="ledger-item">
+            <span class="ledger-item-label">投资款</span>
+            <span class="ledger-item-value expense">${formatCurrency(allExpenses['投资款'])}</span>
+          </div>
+        ` : '<div class="ledger-item"><span class="ledger-item-label">暂无</span></div>'}
       </div>
       <div class="ledger-section">
-        <div class="ledger-sub-section-title">开支</div>
-        <div class="ledger-sub-section">
-          ${['伙食费', '房租', '水电', '招待费', '办公用品', '固定资产', '其它费用'].map(cat => `
-            <div class="ledger-item">
-              <span class="ledger-item-label">${cat}</span>
-              <span class="ledger-item-value expense">${formatCurrency(expenseCategories[cat].reduce((s, i) => s + i.amount, 0))}</span>
-            </div>
-          `).join('')}
-        </div>
+        <div class="ledger-section-title">开支</div>
+        ${['伙食费', '房租', '水电', '招待费', '办公用品', '固定资产', '其它费用'].map(cat => `
+          <div class="ledger-item">
+            <span class="ledger-item-label">${cat}</span>
+            <span class="ledger-item-value expense">${formatCurrency(allExpenses[cat] || 0)}</span>
+          </div>
+        `).join('')}
       </div>
     </div>
   `;
