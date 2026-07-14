@@ -4,6 +4,8 @@ const summary = document.getElementById('summary');
 const stats = document.getElementById('stats');
 const reports = document.getElementById('reports');
 const storageKey = 'smallLoanFinanceRecords';
+const currencyKey = 'financeCurrency';
+let currentCurrency = localStorage.getItem(currencyKey) || 'CNY';
 const dateInput = document.querySelector('input[name="date"]');
 const startDateInput = document.getElementById('startDate');
 const endDateInput = document.getElementById('endDate');
@@ -15,6 +17,8 @@ const exportBtn = document.getElementById('exportBtn');
 const clearBtn = document.getElementById('clearBtn');
 const submitBtn = document.getElementById('submitBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
+const currencySelect = document.getElementById('currencySelect');
+const formCurrencySelect = document.getElementById('formCurrencySelect');
 const loginPage = document.getElementById('loginPage');
 const loginForm = document.getElementById('loginForm');
 const loginNameInput = document.getElementById('loginName');
@@ -188,6 +192,25 @@ if (logoutBtn) {
 
 initAuth();
 
+// 初始化货币选择
+if (currencySelect) {
+  currencySelect.value = currentCurrency;
+  updateCurrencyLabel();
+  currencySelect.addEventListener('change', () => {
+    currentCurrency = currencySelect.value;
+    localStorage.setItem(currencyKey, currentCurrency);
+    updateCurrencyLabel();
+    render();
+  });
+}
+
+function updateCurrencyLabel() {
+  const label = document.getElementById('currencyLabel');
+  if (label) {
+    label.textContent = currentCurrency === 'USD' ? '$' : '¥';
+  }
+}
+
 function saveRecords() {
   localStorage.setItem(storageKey, JSON.stringify(records));
 }
@@ -212,6 +235,11 @@ function getFilteredRecords() {
 
 function formatAmount(value) {
   return Number(value || 0).toFixed(2);
+}
+
+function formatCurrency(value, currency = 'CNY') {
+  const amount = Number(value || 0).toFixed(2);
+  return currency === 'USD' ? `$${amount}` : `¥${amount}`;
 }
 
 function renderStats() {
@@ -239,7 +267,7 @@ function renderStats() {
   stats.innerHTML = `
     <div><strong>${visibleRecords.length}</strong> 条当前筛选结果</div>
     <div><strong>${records.length}</strong> 条总记录</div>
-    <div>收入：${formatAmount(income)} | 支出：${formatAmount(expense)} | 结余：${formatAmount(balance)}</div>
+    <div>收入：${formatCurrency(income)} | 支出：${formatCurrency(expense)} | 结余：${formatCurrency(balance)}</div>
     <div>对账：${checkedCount} | 未对账：${pendingCount}</div>
     <div>常用卡名称：${topCards || '暂无'}</div>
   `;
@@ -251,7 +279,7 @@ function renderReports() {
     const total = visibleRecords
       .filter((item) => item.type === type)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    return `${type}：${formatAmount(total)}`;
+    return `${type}：${formatCurrency(total)}`;
   });
 
   const cardSummary = Object.entries(
@@ -263,7 +291,7 @@ function renderReports() {
   )
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(([name, total]) => `<li>${name}：${formatAmount(total)}</li>`)
+    .map(([name, total]) => `<li>${name}：${formatCurrency(total)}</li>`)
     .join('');
 
   const dateSummary = Object.entries(
@@ -275,7 +303,7 @@ function renderReports() {
   )
     .sort((a, b) => b[0].localeCompare(a[0]))
     .slice(0, 8)
-    .map(([date, total]) => `<li>${date}：${formatAmount(total)}</li>`)
+    .map(([date, total]) => `<li>${date}：${formatCurrency(total)}</li>`)
     .join('');
 
   reports.innerHTML = `
@@ -302,37 +330,125 @@ function render() {
   summary.textContent = `共 ${visibleRecords.length} 条记录（总计 ${records.length} 条）`;
 
   if (!visibleRecords.length) {
-    tableBody.innerHTML = '<tr><td colspan="11">暂无匹配记录</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="12">暂无匹配记录</td></tr>';
     renderStats();
     renderReports();
     return;
   }
 
+  const fieldTypes = {
+    date: 'date',
+    cardName: 'text',
+    bankCard: 'text',
+    toCardNumber: 'text',
+    toCardName: 'text',
+    cardUse: 'text',
+    expenseUse: 'select',
+    type: 'select',
+    amount: 'number',
+    status: 'select',
+    remark: 'text',
+  };
+
   tableBody.innerHTML = visibleRecords
-    .map((item) => `
-      <tr>
-        <td>${item.date || '-'}</td>
-        <td>${item.cardName || '-'}</td>
-        <td>${item.bankCard || '-'}</td>
-        <td>${item.transferRecord || '-'}</td>
-        <td>${item.cardUse || '-'}</td>
-        <td>${item.expenseUse || '-'}</td>
-        <td>${item.type || '-'}</td>
-        <td>${formatAmount(item.amount)}</td>
-        <td><span class="status-badge ${item.status === '已对账' ? 'done' : 'pending'}">${item.status || '未对账'}</span></td>
-        <td>${item.remark || '-'}</td>
+    .map((item) => {
+      const recordIndex = records.indexOf(item);
+      return `
+      <tr data-record-index="${recordIndex}">
+        <td data-field="date" data-type="date">${item.date || '-'}</td>
+        <td data-field="bankCard" data-type="text">${item.bankCard || '-'}</td>
+        <td data-field="cardName" data-type="text">${item.cardName || '-'}</td>
+        <td data-field="toCardNumber" data-type="text">${item.toCardNumber || '-'}</td>
+        <td data-field="toCardName" data-type="text">${item.toCardName || '-'}</td>
+        <td data-field="cardUse" data-type="text">${item.cardUse || '-'}</td>
+        <td data-field="expenseUse" data-type="text">${item.expenseUse || '-'}</td>
+        <td data-field="type" data-type="select">${item.type || '-'}</td>
+        <td data-field="amount" data-type="number">${formatCurrency(item.amount, item.currency)}</td>
+        <td data-field="status" data-type="select" class="status-cell"><span class="status-badge ${item.status === '已对账' ? 'done' : 'pending'}">${item.status || '未对账'}</span></td>
+        <td data-field="remark" data-type="text">${item.remark || '-'}</td>
         <td>
           <div class="action-cell">
-            <button class="edit-btn" type="button" data-edit-index="${records.indexOf(item)}">编辑</button>
-            <button class="delete-btn" type="button" data-index="${records.indexOf(item)}">删除</button>
+            <button class="delete-btn" type="button" data-delete-index="${recordIndex}">删除</button>
           </div>
         </td>
       </tr>
-    `)
+    `;
+    })
     .join('');
 
   renderStats();
   renderReports();
+  attachCellEditListeners();
+}
+
+function createEditControl(fieldName, value) {
+  const escapedValue = String(value || '');
+  if (fieldName === 'date') {
+    return `<input type="date" class="edit-input" value="${escapedValue}" />`;
+  } else if (fieldName === 'amount') {
+    return `<input type="number" class="edit-input" step="0.01" min="0" value="${escapedValue}" />`;
+  } else if (fieldName === 'type') {
+    return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
+      <option value="收入" ${escapedValue === '收入' ? 'selected' : ''}>收入</option>
+      <option value="支出" ${escapedValue === '支出' ? 'selected' : ''}>支出</option>
+    </select>`;
+  } else if (fieldName === 'status') {
+    return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
+      <option value="未对账" ${escapedValue === '未对账' ? 'selected' : ''}>未对账</option>
+      <option value="已对账" ${escapedValue === '已对账' ? 'selected' : ''}>已对账</option>
+    </select>`;
+  } else if (fieldName === 'expenseUse') {
+    return `<select class="edit-input" style="font-size:14px;padding:6px;border:1px solid #2563eb;">
+      <option value=""></option>
+      <option value="投资款" ${escapedValue === '投资款' ? 'selected' : ''}>投资款</option>
+      <option value="伙食费" ${escapedValue === '伙食费' ? 'selected' : ''}>伙食费</option>
+      <option value="房租" ${escapedValue === '房租' ? 'selected' : ''}>房租</option>
+      <option value="水电" ${escapedValue === '水电' ? 'selected' : ''}>水电</option>
+      <option value="招待费" ${escapedValue === '招待费' ? 'selected' : ''}>招待费</option>
+      <option value="办公用品" ${escapedValue === '办公用品' ? 'selected' : ''}>办公用品</option>
+      <option value="固定资产" ${escapedValue === '固定资产' ? 'selected' : ''}>固定资产</option>
+      <option value="其它费用" ${escapedValue === '其它费用' ? 'selected' : ''}>其它费用</option>
+    </select>`;
+  } else {
+    return `<input type="text" class="edit-input" value="${escapedValue}" />`;
+  }
+}
+
+function attachCellEditListeners() {
+  const cells = tableBody.querySelectorAll('td[data-field]');
+  cells.forEach((cell) => {
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('dblclick', (event) => {
+      if (cell.querySelector('.edit-input')) return;
+      const fieldName = cell.getAttribute('data-field');
+      const recordIndex = parseInt(cell.closest('tr').getAttribute('data-record-index'), 10);
+      const record = records[recordIndex];
+      if (!record) return;
+      const currentValue = record[fieldName] ?? '';
+      const html = createEditControl(fieldName, currentValue);
+      cell.innerHTML = html;
+      const input = cell.querySelector('.edit-input');
+      if (input) {
+        input.focus();
+        if (input.type === 'text') input.select();
+        const saveCellEdit = () => {
+          const newValue = input.value.trim();
+          if (fieldName === 'amount') {
+            record[fieldName] = Number(newValue || 0);
+          } else {
+            record[fieldName] = newValue || '';
+          }
+          saveRecords();
+          render();
+        };
+        input.addEventListener('blur', saveCellEdit);
+        input.addEventListener('keydown', (evt) => {
+          if (evt.key === 'Enter') saveCellEdit();
+          if (evt.key === 'Escape') render();
+        });
+      }
+    });
+  });
 }
 
 function fillForm(item) {
@@ -346,6 +462,9 @@ function fillForm(item) {
   if (dateInput) {
     dateInput.value = item.date || new Date().toISOString().slice(0, 10);
   }
+  if (formCurrencySelect) {
+    formCurrencySelect.value = item.currency || 'CNY';
+  }
 }
 
 form.addEventListener('submit', (event) => {
@@ -357,12 +476,14 @@ form.addEventListener('submit', (event) => {
   const record = {
     date: data.date,
     bankCard: data.bankCard,
-    transferRecord: data.transferRecord,
     cardName: data.cardName,
+    toCardNumber: data.toCardNumber,
+    toCardName: data.toCardName,
     cardUse: data.cardUse,
     expenseUse: data.expenseUse,
     type: data.type,
     amount: Number(data.amount || 0),
+    currency: data.currency || 'CNY',
     status: data.status || '未对账',
     remark: data.remark || '',
   };
@@ -378,6 +499,9 @@ form.addEventListener('submit', (event) => {
   form.reset();
   if (dateInput) {
     dateInput.value = new Date().toISOString().slice(0, 10);
+  }
+  if (formCurrencySelect) {
+    formCurrencySelect.value = 'CNY';
   }
   submitBtn.textContent = '新增记录';
   cancelEditBtn.style.display = 'none';
@@ -422,16 +546,18 @@ exportBtn.addEventListener('click', () => {
     return;
   }
 
-  const header = ['日期', '卡名称', '公户转账银行卡号码', '卡转卡记录', '卡用途', '支出用途', '收支类型', '金额', '对账状态', '备注'];
+  const header = ['日期', '转账银行卡号码', '卡名称', '转入银行卡卡号', '卡收款人名称', '卡用途', '支出用途', '收支类型', '金额', '货币单位', '对账状态', '备注'];
   const rows = exportData.map((item) => [
     item.date || '',
-    item.cardName || '',
     item.bankCard || '',
-    item.transferRecord || '',
+    item.cardName || '',
+    item.toCardNumber || '',
+    item.toCardName || '',
     item.cardUse || '',
     item.expenseUse || '',
     item.type || '',
     formatAmount(item.amount),
+    item.currency === 'USD' ? '美元' : '人民币',
     item.status || '未对账',
     item.remark || '',
   ]);
@@ -450,35 +576,11 @@ exportBtn.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-cancelEditBtn.addEventListener('click', () => {
-  editingId = null;
-  form.reset();
-  if (dateInput) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
-  }
-  submitBtn.textContent = '新增记录';
-  cancelEditBtn.style.display = 'none';
-});
-
 tableBody.addEventListener('click', (event) => {
-  const editButton = event.target.closest('button[data-edit-index]');
-  if (editButton) {
-    const index = Number(editButton.getAttribute('data-edit-index'));
-    const item = records[index];
-    if (item) {
-      editingId = index;
-      fillForm(item);
-      submitBtn.textContent = '保存修改';
-      cancelEditBtn.style.display = 'inline-block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    return;
-  }
-
-  const deleteButton = event.target.closest('button[data-index]');
+  const deleteButton = event.target.closest('button[data-delete-index]');
   if (!deleteButton) return;
 
-  const index = Number(deleteButton.getAttribute('data-index'));
+  const index = Number(deleteButton.getAttribute('data-delete-index'));
   if (confirm('确定要删除这条记录吗？')) {
     records.splice(index, 1);
     saveRecords();

@@ -423,9 +423,9 @@
   <div class="app" style="display:none">
     <div class="sidebar">
       <h2>财务台账</h2>
-      <div class="nav-item active">记账录入</div>
-      <div class="nav-item">台账明细</div>
-      <div class="nav-item">对账管理</div>
+      <div class="nav-item active" data-page="entry">记账录入</div>
+      <div class="nav-item" data-page="ledger">台账明细</div>
+      <div class="nav-item" data-page="reconcile">对账管理</div>
     </div>
     <div class="main">
       <div class="page-head">
@@ -437,27 +437,45 @@
       <button type="button" id="logoutBtn" class="secondary" style="display:none;">退出登录</button>
     </div>
 
+    <div id="entryPage" class="page" style="display:block;">
     <form id="recordForm">
       <div class="grid">
         <label>
-          公户转账银行卡号码
+          转账银行卡号码
           <input type="text" name="bankCard" placeholder="请输入银行卡号码" required />
-        </label>
-        <label>
-          卡转卡记录
-          <input type="text" name="transferRecord" placeholder="例如：转入/转出记录" required />
         </label>
         <label>
           卡名称
           <input type="text" name="cardName" placeholder="例如：公户卡" required />
         </label>
         <label>
+          转入银行卡卡号
+          <input type="text" name="toCardNumber" placeholder="转入的银行卡号" required />
+        </label>
+        <label>
+          卡收款人名称
+          <input type="text" name="toCardName" placeholder="转入卡的收款人" required />
+        </label>
+        <label>
           卡用途
           <input type="text" name="cardUse" placeholder="例如：日常周转" required />
         </label>
         <label>
-          支出用途
-          <input type="text" name="expenseUse" placeholder="例如：放款、工资、办公" required />
+  支出用途
+  <select name="expenseUse" required>
+    <option value=""></option>
+    <option value="投资款">投资款</option>
+    <optgroup label="开支">
+      <option value="伙食费">伙食费</option>
+      <option value="房租">房租</option>
+      <option value="水电">水电</option>
+      <option value="招待费">招待费</option>
+      <option value="办公用品">办公用品</option>
+      <option value="固定资产">固定资产</option>
+      <option value="其它费用">其它费用</option>
+    </optgroup>
+  </select>
+</label>
         </label>
         <label>
           收支类型
@@ -466,9 +484,13 @@
             <option value="支出">支出</option>
           </select>
         </label>
-        <label>
+        <label style="flex-direction: row; align-items: center; gap: 10px;">
           金额
-          <input type="number" name="amount" step="0.01" min="0" placeholder="请输入金额" required />
+          <input type="number" name="amount" step="0.01" min="0" placeholder="请输入金额" style="flex: 1;" required />
+          <select id="formCurrencySelect" style="width: 120px;">
+            <option value="CNY" selected>¥ 人民币</option>
+            <option value="USD">$ 美元</option>
+          </select>
         </label>
         <label>
           备注
@@ -514,6 +536,13 @@
             <option value="已对账">已对账</option>
           </select>
         </label>
+        <label>
+          货币单位
+          <select id="currencySelect">
+            <option value="CNY" selected>人民币 (¥)</option>
+            <option value="USD">美元 ($)</option>
+          </select>
+        </label>
       </div>
       <div class="actions">
         <button type="button" id="filterBtn">筛选</button>
@@ -530,13 +559,14 @@
       <thead>
         <tr>
           <th>日期</th>
-          <th>公户转账银行卡号码</th>
-          <th>卡转卡记录</th>
+          <th>转账银行卡号码</th>
           <th>卡名称</th>
+          <th>转入银行卡卡号</th>
+          <th>卡收款人名称</th>
           <th>卡用途</th>
           <th>支出用途</th>
           <th>收支类型</th>
-          <th>金额</th>
+          <th>金额 (<span id="currencyLabel">¥</span>)</th>
           <th>对账状态</th>
           <th>备注</th>
           <th>操作</th>
@@ -544,6 +574,31 @@
       </thead>
       <tbody id="recordsBody"></tbody>
     </table>
+    </div>
+
+    <div id="ledgerPage" class="page" style="display:none;">
+      <div class="ledger-container">
+        <div class="ledger-summary">
+          <div class="summary-item">
+            <div class="summary-label">总收入</div>
+            <div class="summary-value income" id="ledgerTotalIncome">0.00</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">总支出</div>
+            <div class="summary-value expense" id="ledgerTotalExpense">0.00</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">结余</div>
+            <div class="summary-value balance" id="ledgerBalance">0.00</div>
+          </div>
+        </div>
+        <div id="ledgerDetails"></div>
+      </div>
+    </div>
+
+    <div id="reconcilePage" class="page" style="display:none;">
+      <p>对账管理页面</p>
+    </div>
     </div>
   </div>
 
