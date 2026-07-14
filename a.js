@@ -758,15 +758,19 @@ function renderLedger() {
 
     // 各板块实际投资款 = 收到的主卡转入 - 转回主卡的支出
     const calcActual = (group, type) => {
+      // 收到的主卡转入（收入且收支用途=银行放款）
       const incomeFromMain = records
         .filter(r => r.businessType === type && r.type === '收入' && r.expenseUse === '银行放款')
         .reduce((s, r) => s + Number(r.amount || 0), 0);
+      // 转回主卡的金额（支出且转入板块=主卡）
       const transferToMain = records
         .filter(r => r.businessType === type && r.type === '支出' && r.toBusinessType === '主卡')
         .reduce((s, r) => s + Number(r.amount || 0), 0);
+      // 实际转入投资款 = 收到的 - 转回的
       const actualInvest = incomeFromMain - transferToMain;
+      // 实际余额 = 实际投资款 - 该板块支出
       const actualBalance = actualInvest - group.expense;
-      return { actualInvest, actualBalance };
+      return { incomeFromMain, actualInvest, actualBalance };
     };
 
     const xd = calcActual(xdGroup, '小贷业务');
@@ -811,9 +815,9 @@ function renderLedger() {
             <tr>
               <td class="row-label">实际收入</td>
               <td class="col-main number income">${formatCurrency(mainActualIncome)}</td>
-              <td class="col-xd number income">${formatCurrency(xd.actualInvest)}</td>
-              <td class="col-qc number income">${formatCurrency(qc.actualInvest)}</td>
-              <td class="col-sj number income">${formatCurrency(sj.actualInvest)}</td>
+              <td class="col-xd number income">${formatCurrency(xd.incomeFromMain)}</td>
+              <td class="col-qc number income">${formatCurrency(qc.incomeFromMain)}</td>
+              <td class="col-sj number income">${formatCurrency(sj.incomeFromMain)}</td>
             </tr>
             <tr>
               <td class="row-label">实际转出投资款</td>
