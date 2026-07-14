@@ -528,8 +528,8 @@ form.addEventListener('submit', (event) => {
   } else {
     records.unshift(record);
 
-    // 主卡转出时，自动在被转入业务板块生成收入记录
-    if (record.businessType === '主卡' && record.type === '支出' && data.toBusinessType) {
+    // 主卡转出时，自动在被转入板块生成收入记录
+    if (record.businessType === '主卡' && record.type === '支出' && data.toBusinessType && data.toBusinessType !== '主卡') {
       const incomeRecord = {
         date: record.date,
         bankCard: record.toCardNumber || '',
@@ -544,6 +544,26 @@ form.addEventListener('submit', (event) => {
         currency: record.currency,
         status: '已对账',
         remark: `从主卡 ${record.bankCard} 转入`,
+      };
+      records.unshift(incomeRecord);
+    }
+
+    // 业务板块转回主卡时，自动在主卡生成收入记录
+    if (record.businessType !== '主卡' && record.type === '支出' && data.toBusinessType === '主卡') {
+      const incomeRecord = {
+        date: record.date,
+        bankCard: record.toCardNumber || record.bankCard || '',
+        cardName: record.toCardName || record.cardName || '',
+        toCardNumber: '',
+        toCardName: '',
+        cardUse: `${record.businessType}转入`,
+        businessType: '主卡',
+        expenseUse: '银行放款',
+        type: '收入',
+        amount: record.amount,
+        currency: record.currency,
+        status: '已对账',
+        remark: `${record.businessType} ${record.bankCard} 转回主卡`,
       };
       records.unshift(incomeRecord);
     }
