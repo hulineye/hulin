@@ -31,6 +31,10 @@ const userNameDisplay = document.getElementById('userNameDisplay');
 const logoutBtn = document.getElementById('logoutBtn');
 const authStorageKey = 'financeLoginLinks';
 const currentUserKey = 'financeLoggedInUser';
+const businessTypeSelect = document.querySelector('select[name="businessType"]');
+const typeSelect = document.querySelector('select[name="type"]');
+const toBusinessLabel = document.getElementById('toBusinessLabel');
+const toBusinessSelect = document.getElementById('toBusinessType');
 
 let currentUser = null;
 let records = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -203,6 +207,26 @@ if (currencySelect) {
     render();
   });
 }
+
+// 控制转入业务板块显示
+function toggleToBusiness() {
+  const isMainCard = businessTypeSelect && businessTypeSelect.value === '主卡';
+  const isExpense = typeSelect && typeSelect.value === '支出';
+  if (toBusinessLabel) {
+    toBusinessLabel.style.display = (isMainCard && isExpense) ? 'flex' : 'none';
+  }
+  if (toBusinessSelect) {
+    toBusinessSelect.required = (isMainCard && isExpense);
+  }
+}
+
+if (businessTypeSelect) {
+  businessTypeSelect.addEventListener('change', toggleToBusiness);
+}
+if (typeSelect) {
+  typeSelect.addEventListener('change', toggleToBusiness);
+}
+toggleToBusiness(); // 初始化
 
 function updateCurrencyLabel() {
   const label = document.getElementById('currencyLabel');
@@ -503,6 +527,26 @@ form.addEventListener('submit', (event) => {
     editingId = null;
   } else {
     records.unshift(record);
+
+    // 主卡转出时，自动在被转入业务板块生成收入记录
+    if (record.businessType === '主卡' && record.type === '支出' && data.toBusinessType) {
+      const incomeRecord = {
+        date: record.date,
+        bankCard: record.toCardNumber || '',
+        cardName: record.toCardName || '',
+        toCardNumber: '',
+        toCardName: '',
+        cardUse: '从主卡转入',
+        businessType: data.toBusinessType,
+        expenseUse: '银行放款',
+        type: '收入',
+        amount: record.amount,
+        currency: record.currency,
+        status: '已对账',
+        remark: `从主卡 ${record.bankCard} 转入`,
+      };
+      records.unshift(incomeRecord);
+    }
   }
 
   saveRecords();
@@ -513,6 +557,10 @@ form.addEventListener('submit', (event) => {
   if (formCurrencySelect) {
     formCurrencySelect.value = 'CNY';
   }
+  if (toBusinessSelect) {
+    toBusinessSelect.value = '';
+  }
+  toggleToBusiness();
   submitBtn.textContent = '新增记录';
   cancelEditBtn.style.display = 'none';
   render();
