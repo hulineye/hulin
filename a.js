@@ -743,19 +743,47 @@ function renderLedger() {
   // 渲染顶部统计卡片
   const summaryContainer = document.getElementById('ledgerSummary');
   if (summaryContainer) {
-    summaryContainer.innerHTML = businessTypes.map(type => {
-      const group = businessGroups[type];
-      const balance = group.income - group.expense;
-      const borderColor = type === '主卡' ? '#dc2626' : '#2563eb';
-      return `
-        <div class="summary-item" style="border-left: 4px solid ${borderColor};">
-          <div class="summary-label">${type}</div>
-          <div class="summary-value income">收入 ${formatCurrency(group.income)}</div>
-          <div class="summary-value expense">支出 ${formatCurrency(group.expense)}</div>
-          <div class="summary-value balance">结余 ${formatCurrency(balance)}</div>
+    // 计算总体统计
+    const totalIncome = records.filter(r => r.type === '收入').reduce((s, r) => s + Number(r.amount || 0), 0);
+    const totalExpense = records.filter(r => r.type === '支出').reduce((s, r) => s + Number(r.amount || 0), 0);
+    const totalBalance = totalIncome - totalExpense;
+
+    // 计算各板块收到的投资款（从主卡转入的收入）
+    const investmentByBusiness = {};
+    records.filter(r => r.businessType !== '主卡' && r.type === '收入' && r.expenseUse === '银行放款').forEach(r => {
+      const bt = r.businessType || '未分类';
+      investmentByBusiness[bt] = (investmentByBusiness[bt] || 0) + Number(r.amount || 0);
+    });
+
+    summaryContainer.innerHTML = `
+      <div class="summary-item" style="border-left: 4px solid #16a34a;">
+        <div class="summary-label">总体统计</div>
+        <div class="summary-value income">收入 ${formatCurrency(totalIncome)}</div>
+        <div class="summary-value expense">支出 ${formatCurrency(totalExpense)}</div>
+        <div class="summary-value balance">结余 ${formatCurrency(totalBalance)}</div>
+      </div>
+      ${businessTypes.map(type => {
+        const group = businessGroups[type];
+        const balance = group.income - group.expense;
+        const borderColor = type === '主卡' ? '#dc2626' : '#2563eb';
+        return `
+          <div class="summary-item" style="border-left: 4px solid ${borderColor};">
+            <div class="summary-label">${type}</div>
+            <div class="summary-value income">收入 ${formatCurrency(group.income)}</div>
+            <div class="summary-value expense">支出 ${formatCurrency(group.expense)}</div>
+            <div class="summary-value balance">结余 ${formatCurrency(balance)}</div>
+          </div>
+        `;
+      }).join('')}
+      ${Object.keys(investmentByBusiness).length > 0 ? `
+        <div class="summary-item" style="border-left: 4px solid #9333ea;">
+          <div class="summary-label">投资款到板块</div>
+          ${Object.entries(investmentByBusiness).map(([bt, amt]) => `
+            <div class="summary-value" style="font-size:14px;">${bt}：${formatCurrency(amt)}</div>
+          `).join('')}
         </div>
-      `;
-    }).join('');
+      ` : ''}
+    `;
   }
 
   const container = document.getElementById('ledgerDetails');
