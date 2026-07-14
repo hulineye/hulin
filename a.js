@@ -668,26 +668,7 @@ navItems.forEach((item) => {
 
 // 台账明细渲染
 function renderLedger() {
-  // 计算总收入、总支出、结余
-  const totalIncome = records
-    .filter((item) => item.type === '收入')
-    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalExpense = records
-    .filter((item) => item.type === '支出')
-    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const balance = totalIncome - totalExpense;
-
-  const incomeEl = document.getElementById('ledgerTotalIncome');
-  const expenseEl = document.getElementById('ledgerTotalExpense');
-  const balanceEl = document.getElementById('ledgerBalance');
-  if (incomeEl) incomeEl.textContent = formatCurrency(totalIncome);
-  if (expenseEl) expenseEl.textContent = formatCurrency(totalExpense);
-  if (balanceEl) balanceEl.textContent = formatCurrency(balance);
-
-  const container = document.getElementById('ledgerDetails');
-  if (!container) return;
-
-  // 按业务板块分组
+  // 按业务板块分组计算
   const businessTypes = ['主卡', '小贷业务', '汽车业务', '手机分期'];
   const businessGroups = {};
   businessTypes.forEach(type => {
@@ -695,8 +676,6 @@ function renderLedger() {
       income: 0,
       expense: 0,
       cards: {},
-      transferIn: 0,
-      transferOut: 0,
       items: {},
     };
   });
@@ -705,15 +684,12 @@ function renderLedger() {
   records.forEach((item) => {
     const businessType = item.businessType || '主卡';
     if (!businessGroups[businessType]) {
-      businessGroups[businessType] = {
-        income: 0, expense: 0, cards: {}, transferIn: 0, transferOut: 0, items: {}
-      };
+      businessGroups[businessType] = { income: 0, expense: 0, cards: {}, items: {} };
     }
 
     const amount = Number(item.amount || 0);
     const bankCard = item.bankCard || '未填写';
 
-    // 按银行卡统计
     if (!businessGroups[businessType].cards[bankCard]) {
       businessGroups[businessType].cards[bankCard] = { income: 0, expense: 0 };
     }
@@ -725,19 +701,34 @@ function renderLedger() {
       businessGroups[businessType].expense += amount;
       businessGroups[businessType].cards[bankCard].expense += amount;
 
-      // 支出分类
       const expenseUse = item.expenseUse || '其它费用';
       if (!businessGroups[businessType].items[expenseUse]) {
         businessGroups[businessType].items[expenseUse] = 0;
       }
       businessGroups[businessType].items[expenseUse] += amount;
     }
-
-    // 转账关系
-    if (item.type === '支出' && item.cardUse) {
-      businessGroups[businessType].transferOut += amount;
-    }
   });
+
+  // 渲染顶部统计卡片
+  const summaryContainer = document.getElementById('ledgerSummary');
+  if (summaryContainer) {
+    summaryContainer.innerHTML = businessTypes.map(type => {
+      const group = businessGroups[type];
+      const balance = group.income - group.expense;
+      const borderColor = type === '主卡' ? '#dc2626' : '#2563eb';
+      return `
+        <div class="summary-item" style="border-left: 4px solid ${borderColor};">
+          <div class="summary-label">${type}</div>
+          <div class="summary-value income">收入 ${formatCurrency(group.income)}</div>
+          <div class="summary-value expense">支出 ${formatCurrency(group.expense)}</div>
+          <div class="summary-value balance">结余 ${formatCurrency(balance)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const container = document.getElementById('ledgerDetails');
+  if (!container) return;
 
   let html = '';
 
