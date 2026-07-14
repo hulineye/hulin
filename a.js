@@ -210,13 +210,24 @@ if (currencySelect) {
 
 // 控制转入业务板块显示
 function toggleToBusiness() {
-  const isMainCard = businessTypeSelect && businessTypeSelect.value === '主卡';
   const isExpense = typeSelect && typeSelect.value === '支出';
   if (toBusinessLabel) {
-    toBusinessLabel.style.display = (isMainCard && isExpense) ? 'flex' : 'none';
+    toBusinessLabel.style.display = isExpense ? 'flex' : 'none';
   }
   if (toBusinessSelect) {
-    toBusinessSelect.required = (isMainCard && isExpense);
+    toBusinessSelect.required = isExpense;
+  }
+  // 更新可选板块列表，排除当前选择的板块
+  if (toBusinessSelect && isExpense) {
+    const currentBusiness = businessTypeSelect ? businessTypeSelect.value : '主卡';
+    const options = toBusinessSelect.querySelectorAll('option');
+    options.forEach(opt => {
+      if (opt.value === '' || opt.value === currentBusiness) {
+        opt.style.display = '';
+      } else {
+        opt.style.display = '';
+      }
+    });
   }
 }
 
