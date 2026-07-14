@@ -392,6 +392,92 @@
         width: 100%;
       }
     }
+    .ledger-container {
+      padding: 0;
+    }
+    .ledger-summary {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .ledger-summary .summary-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 24px;
+      min-width: 160px;
+    }
+    .ledger-summary .summary-label {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .ledger-summary .summary-value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .ledger-summary .summary-value.income { color: #16a34a; }
+    .ledger-summary .summary-value.expense { color: #dc2626; }
+    .ledger-summary .summary-value.balance { color: #2563eb; }
+    .ledger-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .ledger-card-header {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .ledger-card-header span {
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .ledger-card-header span.income { color: #16a34a; }
+    .ledger-card-header span.expense { color: #dc2626; }
+    .ledger-section {
+      margin-top: 12px;
+    }
+    .ledger-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+    .ledger-sub-section {
+      margin-left: 16px;
+      margin-top: 8px;
+    }
+    .ledger-sub-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .ledger-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: #f8fafc;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .ledger-item-label {
+      color: #334155;
+    }
+    .ledger-item-value {
+      font-weight: 600;
+    }
+    .ledger-item-value.income { color: #16a34a; }
+    .ledger-item-value.expense { color: #dc2626; }
   </style>
 </head>
 <body>
