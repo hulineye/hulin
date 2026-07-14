@@ -813,13 +813,6 @@ function renderLedger() {
             </tr>
             <tr style="height:20px;"><td colspan="5"></td></tr>
             <tr>
-              <td class="row-label">实际收入</td>
-              <td class="col-main number income">${formatCurrency(mainActualIncome)}</td>
-              <td class="col-xd number income">${formatCurrency(xd.incomeFromMain)}</td>
-              <td class="col-qc number income">${formatCurrency(qc.incomeFromMain)}</td>
-              <td class="col-sj number income">${formatCurrency(sj.incomeFromMain)}</td>
-            </tr>
-            <tr>
               <td class="row-label">实际转出投资款</td>
               <td class="col-main number expense">${formatCurrency(mainTransferOut)}</td>
               <td class="col-xd">-</td>
